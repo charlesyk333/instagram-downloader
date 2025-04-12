@@ -9,12 +9,12 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Homepage route for testing the API
+// Root route
 app.get('/', (req, res) => {
   res.send('Welcome to Instagram Video Downloader API. Use POST /api/download');
 });
 
-// Download endpoint
+// Download route
 app.post('/api/download', async (req, res) => {
   const { url } = req.body;
 
@@ -24,10 +24,10 @@ app.post('/api/download', async (req, res) => {
 
   try {
     const response = await axios.get(url, {
+      maxRedirects: 0,
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36',
-      },
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36'
+      }
     });
 
     const $ = cheerio.load(response.data);
@@ -43,22 +43,23 @@ app.post('/api/download', async (req, res) => {
     const videoStream = await axios({
       url: videoUrl,
       method: 'GET',
-      responseType: 'stream',
+      responseType: 'stream'
     });
 
     const writeStream = fs.createWriteStream(filePath);
     videoStream.data.pipe(writeStream);
 
     writeStream.on('finish', () => {
-      res.status(200).json({
-        message: 'Download complete',
-        file: fileName,
-      });
+      res.status(200).json({ message: 'Download complete', file: fileName });
+
+      // Delete the file after 1 hour
+      setTimeout(() => fs.unlinkSync(filePath), 3600000);
     });
 
     writeStream.on('error', () => {
       res.status(500).json({ error: 'Error saving the video.' });
     });
+
   } catch (error) {
     console.error('Error:', error.message);
     res.status(500).json({ error: 'Failed to fetch or download the video' });
