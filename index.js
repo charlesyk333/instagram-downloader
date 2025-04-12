@@ -22,11 +22,18 @@ app.post('/api/download', async (req, res) => {
     return res.status(400).json({ error: 'Invalid Instagram URL' });
   }
 
+  if (!url.match(/instagram\.com\/(reel|p)\//)) {
+    return res.status(400).json({ error: 'Only Reels/Posts are supported' });
+  }
+
   try {
     const response = await axios.get(url, {
       maxRedirects: 0,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.instagram.com/',
+        'X-Requested-With': 'XMLHttpRequest'
       }
     });
 
@@ -51,9 +58,7 @@ app.post('/api/download', async (req, res) => {
 
     writeStream.on('finish', () => {
       res.status(200).json({ message: 'Download complete', file: fileName });
-
-      // Delete the file after 1 hour
-      setTimeout(() => fs.unlinkSync(filePath), 3600000);
+      setTimeout(() => fs.unlinkSync(filePath), 3600000); // Delete after 1h
     });
 
     writeStream.on('error', () => {
@@ -61,8 +66,11 @@ app.post('/api/download', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch or download the video' });
+    console.error('Full error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch/download video',
+      details: error.message 
+    });
   }
 });
 
